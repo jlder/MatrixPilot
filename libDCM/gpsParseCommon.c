@@ -36,6 +36,7 @@
 union longbbbb lat_gps_, lon_gps_;
 union longbbbb alt_sl_gps_;
 union longbbbb tow_;
+union longbbbb as_sim_;
 union intbb hdop_;
 union intbb vdop_;
 union longbbbb date_gps_, time_gps_;
@@ -66,7 +67,7 @@ void gps_init(void)
 {
 #if (GPS_TYPE == GPS_STD)
 	init_gps_std();
-#elif (GPS_TYPE == GPS_UBX_2HZ || GPS_TYPE == GPS_UBX_4HZ)
+#elif (GPS_TYPE == GPS_UBX_2HZ || GPS_TYPE == GPS_UBX_4HZ || GPS_TYPE == GPS_UBX_10HZ)
 	init_gps_ubx();
 #elif (GPS_TYPE == GPS_MTEK)
 	init_gps_mtek();

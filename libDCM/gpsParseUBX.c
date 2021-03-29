@@ -28,7 +28,107 @@
 #include "rmat.h"
 #include "hilsim.h"
 
-#if (GPS_TYPE == GPS_UBX_2HZ || GPS_TYPE == GPS_UBX_4HZ || GPS_TYPE == GPS_ALL)
+// Ajout gfm pout Aid_Ini
+union longbbbb p_Acc_;// 30m
+union longbbbb time_Acc_;
+union longbbbb f_Acc_;
+union longbbbb clkd_Acc_;
+union longbbbb Flags_;// position precise:0x21
+union longbbbb clkd_;
+union longbbbb ftow_;
+union intbb tncfg_;
+uint8_t CK_A;
+uint8_t CK_B;
+uint16_t  AID_INI_length = 56;
+// PVT Variables needed
+union intbb year_, pdop_;
+uint8_t month_, day_, hour_, min_, sec_;
+union longbbbb nano_;
+uint8_t fixtype_,flags_,flags2_;
+union longbbbb height_;
+union longbbbb vAcc_;
+union longbbbb velN_,velE_,velD_,gSpeed_,headMot_,sAcc_,headAcc_;
+// RelPosNED Variables needed
+union longbbbb 	relposN_,relposE_,relposD_,relposLength_,relposHead_;
+uint8_t relposHPN_,relposHPE_,relposHPD_,relposHPL_;     // High-precision components of relative position vector.
+union longbbbb 	accN_,accE_,accD_,accL_,accH_;
+union longbbbb 	FlagsRPN_;     // 
+
+// fin ajout gfm
+void send_msg_AID_INI(uint8_t* AID_INI)
+{
+	CK_A = 0;
+	CK_B = 0;
+
+        AID_INI[0]=0xB5;
+        AID_INI[1]=0x62;
+        AID_INI[2]=0x0B;
+        AID_INI[3]=0x01;
+        AID_INI[4]=0x30;
+        AID_INI[5]=0x00;
+        AID_INI[6]=lat_gps.__.B0;
+        AID_INI[7]=lat_gps.__.B1;
+        AID_INI[8]=lat_gps.__.B2;
+        AID_INI[9]=lat_gps.__.B3;// lon
+        AID_INI[10]=lon_gps.__.B0;
+        AID_INI[11]=lon_gps.__.B1;
+        AID_INI[12]=lon_gps.__.B2;
+        AID_INI[13]=lon_gps.__.B3;                   // lat
+        AID_INI[14]=alt_sl_gps.__.B0;
+        AID_INI[15]=alt_sl_gps.__.B1;
+        AID_INI[16]=alt_sl_gps.__.B2;
+        AID_INI[17]=alt_sl_gps.__.B3;             // hMSL
+        AID_INI[18]=p_Acc_.__.B0;
+        AID_INI[19]=p_Acc_.__.B1;
+        AID_INI[20]=p_Acc_.__.B2;
+        AID_INI[21]=p_Acc_.__.B3;                       // pAcc
+        AID_INI[22]=tncfg_._.B0;
+        AID_INI[23]=tncfg_._.B1;                          //tncfg
+        AID_INI[24]=week_no._.B0;
+        AID_INI[25]=week_no._.B1;                     // week
+        AID_INI[26]=tow.__.B0;
+        AID_INI[27]=tow.__.B1;
+        AID_INI[28]=tow.__.B2;
+        AID_INI[29]=tow.__.B3; // iTOW
+        AID_INI[30]=ftow_.__.B0;
+        AID_INI[31]=ftow_.__.B1;
+        AID_INI[32]=ftow_.__.B2;
+        AID_INI[33]=ftow_.__.B3, // fTOW
+        AID_INI[34]=time_Acc_.__.B0;
+        AID_INI[35]=time_Acc_.__.B1;
+        AID_INI[36]=time_Acc_.__.B2;
+        AID_INI[37]=time_Acc_.__.B3;                 // Time Accuracy
+        AID_INI[38]=f_Acc_.__.B0;
+        AID_INI[39]=f_Acc_.__.B1;
+        AID_INI[40]=f_Acc_.__.B2;
+        AID_INI[41]=f_Acc_.__.B3;                       // f Accuracy
+        AID_INI[42]=clkd_.__.B0;
+        AID_INI[43]=clkd_.__.B1;
+        AID_INI[44]=clkd_.__.B2;
+        AID_INI[45]=clkd_.__.B3;                         // Clock Drift
+        AID_INI[46]=clkd_Acc_.__.B0;
+        AID_INI[47]=clkd_Acc_.__.B1;
+        AID_INI[48]=clkd_Acc_.__.B2;
+        AID_INI[49]=clkd_Acc_.__.B3;                 // ClkD Accuracy
+        if (tow_.WW==0) {
+              AID_INI[50]=0x21;}// Only position is precise
+        else {AID_INI[50]=0x23;}// Both time and positions are precise
+        AID_INI[51]=Flags_.__.B1;
+        AID_INI[52]=Flags_.__.B2;
+        AID_INI[53]=Flags_.__.B3;                       // Flags
+        int i;
+        for (i=0;i<AID_INI_length-2;i++)
+        {
+            CK_A += AID_INI[i];
+            CK_B += CK_A;
+        }
+        AID_INI[54]=CK_A;                                           // Checksum
+        AID_INI[55]=CK_B;                                           // Checksum
+}
+// fin modif gfm
+
+
+#if (GPS_TYPE == GPS_UBX_2HZ || GPS_TYPE == GPS_UBX_4HZ || GPS_TYPE == GPS_UBX_10HZ|| GPS_TYPE == GPS_ALL)
 
 // Parse the GPS messages, using the binary interface.
 // The parser uses a state machine implemented via a pointer to a function.
@@ -38,13 +138,19 @@
 
 static union intbb payloadlength;
 static union intbb checksum;
-static uint16_t msg_class;
-static uint16_t msg_id;
+//Modif gfm
+//static uint16_t msg_class;
+//static uint16_t msg_id;
+static uint8_t msg_class;
+static uint8_t msg_id;
+//static uint8_t msg_sync1;
+//static uint8_t msg_sync2;
+// fin modif gfm
 static uint16_t ack_class; // set but never used - RobD
 static uint16_t ack_id; // set but never used - RobD
 static uint16_t ack_type; // set but never used - RobD
-static uint8_t CK_A;
-static uint8_t CK_B;
+//static uint8_t CK_A;
+//static uint8_t CK_B;
 
 static void msg_B3(uint8_t inchar);
 static void msg_SYNC1(uint8_t inchar);
@@ -58,6 +164,12 @@ static void msg_SOL(uint8_t inchar);
 static void msg_VELNED(uint8_t inchar);
 static void msg_CS0(uint8_t inchar);
 static void msg_CS1(uint8_t inchar);
+// Modif gfm
+static void msg_AID_INI(uint8_t inchar);
+static void msg_PVT(uint8_t inchar);
+static void msg_RELPOSNED(uint8_t inchar);
+// UDB to send AID_INI message to GPS UBX
+// fin modif gfm
 
 #if (HILSIM == 1)
 	static void msg_BODYRATES(uint8_t inchar);
@@ -82,17 +194,27 @@ const uint8_t set_rate[] = {
 	0xB5, 0x62, // Header
 	0x06, 0x08, // ID
 	0x06, 0x00, // Payload Length
-	0xFA, 0x00, // measRate
+	0xFA, 0x00, // measRate 4 Hz
 	0x01, 0x00, // navRate
 	0x01, 0x00, // timeRef
 	0x10, 0x96  // Checksum
+};
+#elif (GPS_TYPE == GPS_UBX_10HZ)
+const uint8_t set_rate[] = {
+	0xB5, 0x62, // Header
+	0x06, 0x08, // ID
+	0x06, 0x00, // Payload Length
+	0x64, 0x00, // measRate 10 Hz
+	0x01, 0x00, // navRate
+	0x01, 0x00, // timeRef
+	0x7A, 0x12  // Checksum
 };
 #else
 const uint8_t set_rate[] = {
 	0xB5, 0x62, // Header
 	0x06, 0x08, // ID
 	0x06, 0x00, // Payload Length
-	0xF4, 0x01, // measRate 2Hz
+	0xF4, 0x01, // measRate 2 Hz
 	0x01, 0x00, // navRate
 	0x01, 0x00, // timeRef
 	0x0B, 0x77  // Checksum
@@ -191,6 +313,35 @@ const uint8_t enable_NAV_DOP[] = {
 	0x00,       // Rate on ???
 	0x18, 0xDB  // Checksum
 };
+#elif (GPS_TYPE == GPS_UBX_10HZ)
+const uint8_t enable_NAV_PVT[] = {
+	0xB5, 0x62, // Header
+	0x06, 0x01, // ID
+	0x08, 0x00, // Payload length
+	0x01,       // NAV message class
+	0x07,       // DOP message ID
+	0x00,       // Rate on I2C
+	0x0A,       // Rate on UART 1
+	0x00,       // Rate on UART 2
+	0x00,       // Rate on USB
+	0x00,       // Rate on SPI
+	0x00,       // Rate on ???
+	0x21, 0x0E  // Checksum
+};
+const uint8_t enable_NAV_RELPOSNED[] = {
+	0xB5, 0x62, // Header
+	0x06, 0x01, // ID
+	0x08, 0x00, // Payload length
+	0x01,       // NAV message class
+	0x3C,       // DOP message ID
+	0x00,       // Rate on I2C
+	0x0A,       // Rate on UART 1
+	0x00,       // Rate on UART 2
+	0x00,       // Rate on USB
+	0x00,       // Rate on SPI
+	0x00,       // Rate on ???
+	0x56, 0x81  // Checksum
+};
 #else
 const uint8_t enable_NAV_DOP[] = {
 	0xB5, 0x62, // Header
@@ -254,13 +405,15 @@ const uint16_t enable_NAV_SOL_length = 16;
 const uint16_t enable_NAV_POSLLH_length = 16;
 const uint16_t enable_NAV_VELNED_length = 16;
 const uint16_t enable_NAV_DOP_length = 16;
+const uint16_t enable_NAV_PVT_length = 16;
+const uint16_t enable_NAV_RELPOSNED_length = 16;
 const uint16_t enable_UBX_only_length = 28;
 const uint16_t enable_SBAS_length = 16;
 const uint16_t config_NAV5_length = 44;
 
 void (*msg_parse)(uint8_t gpschar) = &msg_B3;
 
-static uint8_t un;
+uint8_t un;
 //static union longbbbb xpg_, ypg_, zpg_;
 //static union longbbbb xvg_, yvg_, zvg_;
 //static uint8_t mode1_, mode2_;
@@ -363,6 +516,107 @@ uint8_t* const msg_VELNED_parse[] = {
 	&un, &un, &un, &un,                                 // sAcc
 	&un, &un, &un, &un,                                 // cAcc
 };
+// modif gfm : mmessage AID_INI definition
+
+uint8_t* const msg_AID_INI_parse[] = {
+	//0xB5, 0x62, // Header
+	//0x0B, 0x01, // ID
+	//0x30, 0x00, // Payload length
+	&lon_gps_.__.B0, &lon_gps_.__.B1,
+	&lon_gps_.__.B2, &lon_gps_.__.B3,                 // lon
+	&lat_gps_.__.B0, &lat_gps_.__.B1,
+	&lat_gps_.__.B2, &lat_gps_.__.B3,                   // lat
+	&alt_sl_gps_.__.B0, &alt_sl_gps_.__.B1,
+	&alt_sl_gps_.__.B2, &alt_sl_gps_.__.B3,             // hMSL
+	&p_Acc_.__.B0, &p_Acc_.__.B1,
+        &p_Acc_.__.B2, &p_Acc_.__.B3,                       // pAcc
+	&tncfg_._.B0,&tncfg_._.B1,                          //tncfg
+	&week_no_._.B0, &week_no_._.B1,                     // week
+	&tow_.__.B0, &tow_.__.B1, &tow_.__.B2, &tow_.__.B3, // iTOW
+	&ftow_.__.B0, &ftow_.__.B1, &ftow_.__.B2, &ftow_.__.B3, // fTOW
+	&time_Acc_.__.B0, &time_Acc_.__.B1,
+	&time_Acc_.__.B2, &time_Acc_.__.B3,                 // Time Accuracy
+	&f_Acc_.__.B0, &f_Acc_.__.B1,
+	&f_Acc_.__.B2, &f_Acc_.__.B3,                       // f Accuracy
+	&clkd_.__.B0, &clkd_.__.B1,
+	&clkd_.__.B2, &clkd_.__.B3,                         // Clock Drift
+	&clkd_Acc_.__.B0, &clkd_Acc_.__.B1,
+	&clkd_Acc_.__.B2, &clkd_Acc_.__.B3,                 // ClkD Accuracy
+	&Flags_.__.B0, &Flags_.__.B1,
+	&Flags_.__.B2, &Flags_.__.B3,                       // Flags
+	//0xCC, 0x0B  // Checksum
+};
+
+uint8_t  AID_INI[] = {
+	0xB5, 0x62, // Header
+	0x0B, 0x01, // ID
+	0x30, 0x00, // Payload length
+	0x5A, 0x9F, 0x1B, 0x1d, //lon
+	0x6C, 0x6D, 0x6F, 0x01, //lat
+	0xD8, 0x27, 0x00, 0x00, //alt
+	0xB8, 0x0B, 0x00, 0x00, //p_Acc
+	0x00, 0x00, //tncfg
+	0x00, 0x00, //week_no
+	0x00, 0x00,0x00, 0x00, //tow
+	0x00, 0x00,0x00, 0x00, //ftow
+	0x00, 0x00,0x00, 0x00, //time_Acc
+	0x00, 0x00,0x00, 0x00, //f_Acc
+	0x00, 0x00,0x00, 0x00, //clkd
+	0x00, 0x00,0x00, 0x00, //clkd_Acc
+	0x21, 0x00,0x00, 0x00, //Flags
+	0x59, 0xE7,  // Checksum
+};
+
+//extern uint8_t  AID_INI[];
+uint8_t* const msg_PVT_parse[] = {
+	&tow_.__.B0, &tow_.__.B1, &tow_.__.B2, &tow_.__.B3,// iTOW
+    &year_._.B0,&year_._.B1,&month_, &day_,//Date
+    &hour_,&min_,&sec_,//time
+    &un,//time valid
+    &time_Acc_.__.B0,&time_Acc_.__.B1,&time_Acc_.__.B2,&time_Acc_.__.B3,// time accuracy (ns))
+    &nano_.__.B0,&nano_.__.B1,&nano_.__.B2,&nano_.__.B3,//
+    &nav_valid_,&flags_,&flags2_,//nav_valid to replace FixType
+    &svs_,
+	&lon_gps_.__.B0, &lon_gps_.__.B1,&lon_gps_.__.B2, &lon_gps_.__.B3, // lon
+	&lat_gps_.__.B0, &lat_gps_.__.B1,&lat_gps_.__.B2, &lat_gps_.__.B3, // lat
+	&height_.__.B0, &height_.__.B1, &height_.__.B2, &height_.__.B3,     // height
+	&alt_sl_gps_.__.B0, &alt_sl_gps_.__.B1,	&alt_sl_gps_.__.B2, &alt_sl_gps_.__.B3,// hMSL
+	&p_Acc_.__.B0, &p_Acc_.__.B1, &p_Acc_.__.B2, &p_Acc_.__.B3,     // horizontal Accuracy
+	&vAcc_.__.B0, &vAcc_.__.B1, &vAcc_.__.B2, &vAcc_.__.B3,     // vertical Accuracy
+	&velN_.__.B0, &velN_.__.B1, &velN_.__.B2, &velN_.__.B3,     // North velocity
+	&velE_.__.B0, &velE_.__.B1, &velE_.__.B2, &velE_.__.B3,     // East velocity
+	&velD_.__.B0, &velD_.__.B1, &velD_.__.B2, &velD_.__.B3,     // Down velocity
+	&gSpeed_.__.B0, &gSpeed_.__.B1, &gSpeed_.__.B2, &gSpeed_.__.B3,     // Ground speed
+	&headMot_.__.B0, &headMot_.__.B1, &headMot_.__.B2, &headMot_.__.B3,     // Heading motio
+	&sAcc_.__.B0, &sAcc_.__.B1, &sAcc_.__.B2, &sAcc_.__.B3,     // Speed Accuracy
+	&headAcc_.__.B0, &headAcc_.__.B1, &headAcc_.__.B2, &headAcc_.__.B3,     // vertical Accuracy
+	&pdop_._.B0, &pdop_._.B1,     // position dilution of precision
+	&un, &un, &un, &un, &un, &un,                                 // reserved
+	&un, &un, &un, &un,                                 // HeadVeh
+	&un, &un,                                 // Mag Declination
+	&un, &un                                 // Mag Accuracy
+};
+uint8_t* const msg_RELPOSNED_parse[] = {
+    &un,// version
+    &un,//reserved0
+    &un, &un, //ref Station ID
+	&tow_.__.B0, &tow_.__.B1, &tow_.__.B2, &tow_.__.B3,// iTOW
+	&relposN_.__.B0, &relposN_.__.B1,&relposN_.__.B2, &relposN_.__.B3, // North component of relative position vector cm
+	&relposE_.__.B0, &relposE_.__.B1,&relposE_.__.B2, &relposE_.__.B3, // Est component of relative position vector cm
+	&relposD_.__.B0, &relposD_.__.B1, &relposD_.__.B2, &relposD_.__.B3,// Down component of relative position vector cm
+	&relposLength_.__.B0, &relposLength_.__.B1,	&relposLength_.__.B2, &relposLength_.__.B3,// Length  of relative position vector cm
+	&relposHead_.__.B0, &relposHead_.__.B1, &relposHead_.__.B2, &relposHead_.__.B3,     // Heading of relative position vector Accuracy 10-5 deg
+	&un, &un, &un, &un,                                 // reserved
+	&relposHPN_,&relposHPE_,&relposHPD_,&relposHPL_,     // High-precision components of relative position vector 0.1 mm.
+	&accN_.__.B0, &accN_.__.B1,&accN_.__.B2, &accN_.__.B3, // Accuracy of relative position North component mm
+	&accE_.__.B0, &accE_.__.B1,&accE_.__.B2, &accE_.__.B3, // Accuracy of relative position East component mm
+	&accD_.__.B0, &accD_.__.B1, &accD_.__.B2, &accD_.__.B3,     // Accuracy of relative position Down component mm
+	&accL_.__.B0, &accL_.__.B1,	&accL_.__.B2, &accL_.__.B3,// Accuracy of relative position Length mm
+	&accH_.__.B0, &accH_.__.B1, &accH_.__.B2, &accH_.__.B3,     // Accuracy of relative position Heading 10-5 deg
+	&un, &un, &un, &un,                                 // reserved
+	&FlagsRPN_.__.B0, &FlagsRPN_.__.B1, &FlagsRPN_.__.B2, &FlagsRPN_.__.B3     // Flags RelPosNED
+};
+// fin modif gfm
 
 #if (HILSIM == 1)
 // These are the data being delivered from the hardware-in-the-loop simulator
@@ -386,9 +640,10 @@ void gps_startup_sequence(int16_t gpscount)
 #if (HILSIM == 1)
 		udb_gps_set_rate(HILSIM_BAUD);
 #else
-		udb_gps_set_rate(9600);
+		udb_gps_set_rate(57600);
 #endif
 	}
+#if (GPS_TYPE != GPS_UBX_10HZ)
 	else if (dcm_flags._.nmea_passthrough && gpscount == 200)
 		gpsoutline(disable_GSV);
 	else if (dcm_flags._.nmea_passthrough && gpscount == 190)
@@ -402,21 +657,26 @@ void gps_startup_sequence(int16_t gpscount)
 		gpsoutline(bin_mode_withnmea);
 	else if (!dcm_flags._.nmea_passthrough && gpscount == 160)
 		// set the UBX to use binary mode
-		gpsoutline(bin_mode_nonmea);
-#if (HILSIM != 1)
-	else if (gpscount == 150)
-		udb_gps_set_rate(19200);
-#endif
-	else if (gpscount == 140)
-		gpsoutbin(set_rate_length, set_rate);
-	else if (gpscount == 130)
+		gpsoutline(bin_mode_nonmea); // Set GPS baud rate 19200
+	#if (HILSIM != 1)
+        else if (gpscount == 150)
+	         udb_gps_set_rate(19200);// UART1 baudrate = 19200 instead of default value 9600 of GT-635T default baudrate
+    else if (gpscount == 140)
+		gpsoutbin(set_rate_length, set_rate); // Is this command redundant with bin_mode_nonmea?
+	else if (dcm_flags._.nmea_passthrough && gpscount == 130)
+		gpsoutbin(enable_UBX_only_length, enable_UBX_NMEA);
+	else if (!dcm_flags._.nmea_passthrough && gpscount == 130)
+		gpsoutbin(enable_UBX_only_length, enable_UBX_only);
+	else if (gpscount == 120)
 		// command GPS to select which messages are sent, using UBX interface
 		gpsoutbin(enable_NAV_SOL_length, enable_NAV_SOL);
 	else if (gpscount == 120)
 		gpsoutbin(enable_NAV_POSLLH_length, enable_NAV_POSLLH);
 	else if (gpscount == 110)
-		gpsoutbin(enable_NAV_VELNED_length, enable_NAV_VELNED);
+		gpsoutbin(enable_NAV_POSLLH_length, enable_NAV_POSLLH);
 	else if (gpscount == 100)
+		gpsoutbin(enable_NAV_VELNED_length, enable_NAV_VELNED);
+	else if (gpscount == 90)
 		gpsoutbin(enable_NAV_DOP_length, enable_NAV_DOP);
 	else if (dcm_flags._.nmea_passthrough && gpscount == 90)
 		gpsoutbin(enable_UBX_only_length, enable_UBX_NMEA);
@@ -426,12 +686,28 @@ void gps_startup_sequence(int16_t gpscount)
 		gpsoutbin(enable_SBAS_length, enable_SBAS);
 	else if (gpscount == 70)
 		gpsoutbin(config_NAV5_length, config_NAV5);
+       // modif gfm
+	else if (gpscount == 60) 
+       { // Ne faut-ilpas envoyer AID_INI que lorsque l'heure est envoyée par le GCS?
+//        send_msg_AID_INI(AID_INI);
+//  		gpsoutbin(AID_INI_length, AID_INI);
+        
+        }
+#endif
+#endif
+ // fin modif gfm
 }
 
 boolean gps_nav_valid(void)
 {
-	return (nav_valid_ == 3);
+	return (nav_valid_ >= 3);
 }
+
+boolean differential_gps(void)
+{
+	return ( (FlagsRPN_.__.B0 & 2 )== 2) ;
+}
+
 
 /*
 int16_t hex_count = 0;
@@ -607,6 +883,44 @@ static void msg_PL1(uint8_t gpschar)
 					}
 					break;
 				}
+// modif gfm
+				case 0x07 : { // NAV_PVT message
+					if (payloadlength.BB  == NUM_POINTERS_IN(msg_PVT_parse))
+					{
+						msg_parse = &msg_PVT;
+					}
+					else
+					{
+						gps_parse_errors++;
+						msg_parse = &msg_B3;    // error condition
+					}
+					break;
+				}
+                case 0x0B : { // AID-INI message
+					if (payloadlength.BB  == NUM_POINTERS_IN(msg_AID_INI_parse))
+					{
+						msg_parse = &msg_AID_INI;
+					}
+					else
+					{
+						msg_parse = &msg_B3;    // error condition
+					}
+					msg_parse = &msg_AID_INI;    // TODO: this does not look right (wipes out error setting above) - RobD
+					break;
+				}
+				case 0x3C : { // NAV_RELPOSNED message
+					if (payloadlength.BB  == NUM_POINTERS_IN(msg_RELPOSNED_parse))
+					{
+						msg_parse = &msg_RELPOSNED;
+					}
+					else
+					{
+						gps_parse_errors++;
+						msg_parse = &msg_B3;    // error condition
+					}
+					break;
+				}
+// fin modif gfm
 #if (HILSIM == 1)
 				case 0xAB : { // NAV_BODYRATES message - THIS IS NOT AN OFFICIAL UBX MESSAGE
 					// WE ARE FAKING THIS FOR HIL SIMULATION
@@ -742,6 +1056,61 @@ static void msg_VELNED(uint8_t gpschar)
 		msg_parse = &msg_CS1;
 	}
 }
+// Modif gfm
+static void msg_AID_INI(uint8_t gpschar)
+{
+	if (payloadlength.BB > 0)
+	{
+		*msg_AID_INI_parse[store_index++] = gpschar;
+		CK_A += gpschar;
+		CK_B += CK_A;
+		payloadlength.BB--;
+	}
+	else
+	{
+		// If the payload length is zero, we have received the entire payload, or the payload length
+		// was zero to start with. either way, the byte we just received is the first checksum byte.
+		//gpsoutchar2(0x0B);
+		checksum._.B1 = gpschar;
+		msg_parse = &msg_CS1;
+	}
+}
+static void msg_PVT(uint8_t gpschar)
+{
+	if (payloadlength.BB > 0)
+	{
+		*msg_PVT_parse[store_index++] = gpschar;
+		CK_A += gpschar;
+		CK_B += CK_A;
+		payloadlength.BB--;
+	}
+	else
+	{
+		// If the payload length is zero, we have received the entire payload, or the payload length
+		// was zero to start with. either way, the byte we just received is the first checksum byte.
+		//gpsoutchar2(0x0B);
+		checksum._.B1 = gpschar;
+		msg_parse = &msg_CS1;
+	}
+}
+static void msg_RELPOSNED(uint8_t gpschar)
+{
+	if (payloadlength.BB > 0)
+	{
+		*msg_RELPOSNED_parse[store_index++] = gpschar;
+		CK_A += gpschar;
+		CK_B += CK_A;
+		payloadlength.BB--;
+	}
+	else
+	{
+		// If the payload length is zero, we have received the entire payload, or the payload length
+		// was zero to start with. either way, the byte we just received is the first checksum byte.
+		//gpsoutchar2(0x0B);
+		checksum._.B1 = gpschar;
+		msg_parse = &msg_CS1;
+	}
+}
 
 #if (HILSIM == 1)
 static void msg_BODYRATES(uint8_t gpschar)
@@ -829,11 +1198,7 @@ static void msg_CS1(uint8_t gpschar)
 	checksum._.B0 = gpschar;
 	if ((checksum._.B1 == CK_A) && (checksum._.B0 == CK_B))
 	{
-		if (msg_id == 0x12)
-		{
-			// correct checksum for VELNED message
 			gps_parse_common(); // parsing is complete, schedule navigation
-		}
 #if (HILSIM == 1)
 		else if (msg_id == 0xAB)
 		{
@@ -858,18 +1223,35 @@ static void msg_CS1(uint8_t gpschar)
 
 void gps_update_basic_data(void)
 {
-	week_no         = week_no_;
+//	week_no         = week_no_;
 	svs             = svs_;
 }
 
 void gps_commit_data(void)
 {
 	//bin_out(0xFF);
-	week_no         = week_no_;
+	date_gps_.WW=100*year_.BB+100*month_+day_;
+    if (week_no.BB == 0)
+	{
+		week_no.BB = calculate_week_num(date_gps_.WW);
+	}
 	tow             = tow_;
 	lat_gps         = lat_gps_;
 	lon_gps         = lon_gps_;
 	alt_sl_gps.WW   = alt_sl_gps_.WW / 10;          // SIRF provides altMSL in cm, UBX provides it in mm
+    vel_N.WW           = velN_.WW / 10;     //vel en mm/s -> cm/s
+    vel_E.WW           = velE_.WW / 10;
+    vel_D.WW           = velD_.WW / 10;
+#if (GPS_TYPE == GPS_UBX_10HZ)
+	sog_gps.WW      = gSpeed_.WW / 10;                // SIRF uses 2 byte SOG, UBX PVT in mm/s (max 65 m/s)
+	cog_gps.WW      = (uint16_t)(headMot_.WW / 1000);// SIRF uses 2 byte COG, 10^-2 deg, UBX PVT 10^-5 deg in centième de degré, (max 655 degrés)
+	climb_gps.WW    = - velD_.WW / 10;            // SIRF uses 2 byte climb rate, UBX provides 4 bytes
+	hdop            = (uint8_t)(hdop_.BB / 20);     // SIRF scales HDOP by 5, UBX by 10^-2
+	vdop		= (uint8_t)(vAcc_.WW / 20);    // Vertical accuracy is not vertical DOP but can be used instead
+    relposN = relposN_;
+    relposE = relposE_;
+    relposD = relposD_;
+#else    
 	sog_gps.BB      = sog_gps_._.W0;                // SIRF uses 2 byte SOG, UBX provides 4 bytes
 #if (HILSIM == 1)
 	hilsim_airspeed.BB = as_sim_._.W0;              // provided by HILSIM, simulated airspeed
@@ -879,6 +1261,12 @@ void gps_commit_data(void)
 	climb_gps.BB    = - climb_gps_._.W0;            // SIRF uses 2 byte climb rate, UBX provides 4 bytes
 	hdop            = (uint8_t)(hdop_.BB / 20);     // SIRF scales HDOP by 5, UBX by 10^-2
 	vdop		= (uint8_t)(vdop_.BB / 20);
+#endif
+    
+#if (HILSIM == 1)
+	hilsim_airspeed.BB = as_sim_._.W0;              // provided by HILSIM, simulated airspeed
+#endif
+
 	// SIRF provides position in m, UBX provides cm
 //	xpg.WW          = xpg_.WW / 100;
 //	ypg.WW          = ypg_.WW / 100;
@@ -895,6 +1283,33 @@ void gps_commit_data(void)
 #if (HILSIM == 1 && MAG_YAW_DRIFT == 1)
 	HILSIM_MagData(mag_drift_callback); // run the magnetometer computations
 #endif // HILSIM
+}
+void init_gps_data(void)
+{
+	//bin_out(0xFF);
+// as there is no absolute time in the UDB5, week_no and tow are initialized to 0
+	week_no_.BB  = 0;
+	tow_.WW      = 0;
+	p_Acc_.WW    = 3000;       //pAcc
+	tncfg_.BB    = 0;          //tncfg
+	ftow_.WW     = 0;
+	time_Acc_.WW =0;
+    f_Acc_.WW    =0;           // f Accuracy
+	clkd_.WW     =0;
+    clkd_Acc_.WW =0;           // ClkD Accuracy
+	Flags_.__.B0 =0x21;
+    Flags_.__.B1 =0;
+	Flags_.__.B2 =0;
+    Flags_.__.B3 =0;            // Flags
+
+    dcm_set_origin_location(-20073534,486224810,1522);
+	lat_gps_         = lat_origin;
+	lon_gps_        = lon_origin;
+	alt_sl_gps_.WW   = alt_origin.WW;          // SIRF provides altMSL in cm, UBX provides it in mm gfm mm->cm
+    relposN_.WW = 0;
+    relposE_.WW = 0;
+    relposD_.WW = 0;
+    // à faire dans la fonction get_fixed_origin de flightplan.c
 }
 
 #if (HILSIM == 1)
@@ -966,6 +1381,9 @@ void HILSIM_set_omegagyro(void)
 
 void init_gps_ubx(void)
 {
+// modif gfm
+        init_gps_data();
+// fin modif gfm
 }
 
-#endif // (GPS_TYPE == GPS_UBX_2HZ || GPS_TYPE == GPS_UBX_4HZ || GPS_TYPE == GPS_ALL)
+#endif // (GPS_TYPE == GPS_UBX_2HZ || GPS_TYPE == GPS_UBX_4HZ || GPS_TYPE == GPS_UBX_10HZ || GPS_TYPE == GPS_ALL)

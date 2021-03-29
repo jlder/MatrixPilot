@@ -49,15 +49,20 @@ union longbbbb lat_origin, lon_origin, alt_origin;  // (COULD THIS BETTER BE A V
 ///////////////////////////////////////////////////////////////////////////////
 // WRAP ALL THIS UP INTO A STRUCTURE
 volatile union longbbbb lat_gps, lon_gps, alt_sl_gps;        // latitude, longitude, altitude   (COULD THIS BETTER BE A VECTOR??)
+volatile union longbbbb vel_N, vel_E, vel_D;        // latitude, longitude, altitude   (COULD THIS BETTER BE A VECTOR??)
 volatile uint8_t hdop;                                       // horizontal dilution of precision
 volatile uint8_t vdop;                                       // vertical dilution of precision
 volatile uint8_t svs;    // referenced by telemetry and OSD modules  // number of satellites
 // these are only exported for telemetry output
 volatile union intbb week_no;
-volatile union intbb sog_gps;                                // speed over ground
-volatile union uintbb cog_gps;                               // course over ground
-volatile union intbb climb_gps;                              // climb
+volatile union longbbbb sog_gps;                                // speed over ground
+volatile union longbbbb cog_gps;                               // course over ground
+volatile union longbbbb climb_gps;                              // climb
 volatile union longbbbb tow;
+volatile union longbbbb    relposN;
+volatile union longbbbb    relposE;
+volatile union longbbbb    relposD;
+
 ///////////////////////////////////////////////////////////////////////////////
 // PASS THE STRUCTURE* TO THE gps_commit_data() functions
 

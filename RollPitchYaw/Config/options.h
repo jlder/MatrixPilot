@@ -52,7 +52,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 // Set this value to your GPS type.  (Set to GPS_STD, GPS_UBX_2HZ, GPS_UBX_4HZ, GPS_MTEK, GPS_NMEA, or GPS_NONE)
-#define GPS_TYPE                            GPS_STD
+#define GPS_TYPE                            GPS_UBX_10HZ
 
 ///////////////////////////////////////////////////////////////////////////////
 // You can specify a level of good GNSS reception before MatrixPilot accepts "GPS ACQUIRED".
@@ -122,7 +122,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Serial Output BAUD rate for status messages
 //  19200, 38400, 57600, 115200, 230400, 460800, 921600 // yes, it really will work at this rate
-#define SERIAL_BAUDRATE                     57600 // default
+#define SERIAL_BAUDRATE                     115200 // default
 
 
 ////////////////////////////////////////////////////////////////////////////////

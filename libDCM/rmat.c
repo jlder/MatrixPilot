@@ -610,7 +610,7 @@ void dcm_run_imu_step(int16_t angleOfAttack)
 	// update the matrix, renormalize it, adjust for roll and
 	// pitch drift, and send it to the servos.
 	dead_reckon();              // in libDCM:deadReconing.c
-	adj_accel(angleOfAttack);   // local
+//	adj_accel(angleOfAttack);   // local
 	rupdate();                  // local
 	normalize();                // local
 	roll_pitch_drift();         // local

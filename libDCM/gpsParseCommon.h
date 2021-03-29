@@ -20,15 +20,15 @@
 
 
 extern volatile union intbb week_no;
-extern volatile union intbb sog_gps;        // speed over ground
-extern volatile union uintbb cog_gps;       // course over ground, units: degrees * 100, range [0-35999]
-extern volatile union intbb climb_gps;      // climb
+extern volatile union longbbbb sog_gps;        // speed over ground
+extern volatile union longbbbb cog_gps;       // course over ground, units: degrees * 100, range [0-35999]
+extern volatile union longbbbb climb_gps;      // climb
 extern volatile union intbb hilsim_airspeed;// referenced in estWind and deadReckoning modules
 extern volatile union longbbbb tow;
 extern volatile uint8_t hdop;               // horizontal dilution of precision
 extern volatile uint8_t vdop;               // vertical  dilution of precision
 extern volatile uint8_t svs;                // number of satellites
-//extern union longbbbb as_sim_;
+extern union longbbbb as_sim;
 extern union longbbbb xpg, ypg, zpg;        // gps x, y, z position
 extern union intbb xvg, yvg, zvg;           // gps x, y, z velocity
 //extern uint8_t mode1, mode2;              // gps mode1, mode2
@@ -38,7 +38,7 @@ extern int16_t cos_lat;
 //
 //extern union intbb payloadlength;
 //extern int16_t store_index;
-//extern uint8_t un;
+extern uint8_t un;
 //extern uint8_t svs_;
 extern union longbbbb lat_gps_;
 extern union longbbbb lon_gps_;

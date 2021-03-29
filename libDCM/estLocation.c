@@ -73,7 +73,6 @@ void estLocation(void)
 	static int16_t location_previous[] = { 0, 0, 0 };
 
 	union longbbbb accum;
-	union longww accum_velocity;
 	int8_t cog_circular;
 	int8_t cog_delta;
 	int16_t sog_delta;
@@ -91,7 +90,7 @@ void estLocation(void)
 	location_plane(&location[0]);
 
 	// convert GPS course of 360 degrees to a binary model with 256
-	accum.WW = __builtin_muluu(COURSEDEG_2_BYTECIR, cog_gps.BB) + 0x00008000;
+	accum.WW = __builtin_muluu(COURSEDEG_2_BYTECIR, cog_gps.WW) + 0x00008000;
 	// re-orientate from compass (clockwise) to maths (anti-clockwise) with 0 degrees in East
 	cog_circular = -accum.__.B2 + 64;
 
@@ -106,8 +105,8 @@ void estLocation(void)
 	if (dcm_flags._.gps_history_valid)
 	{
 		cog_delta = cog_circular - cog_previous;
-		sog_delta = sog_gps.BB - sog_previous;
-		climb_rate_delta = climb_gps.BB - climb_rate_previous;
+		sog_delta = sog_gps.WW - sog_previous;
+		climb_rate_delta = climb_gps.WW - climb_rate_previous;
 
 		location_deltaXY.x = location[0] - location_previous[0];
 		location_deltaXY.y = location[1] - location_previous[1];
@@ -132,18 +131,24 @@ void estLocation(void)
 
 	// Note that all these velocities are in centimeters / second
 
-	ground_velocity_magnitudeXY = sog_gps.BB + sog_delta;
-	sog_previous = sog_gps.BB;
+	ground_velocity_magnitudeXY = sog_gps.WW + sog_delta;
+	sog_previous = sog_gps.WW;
 
-	GPSvelocity.z = climb_gps.BB + climb_rate_delta;
-	climb_rate_previous = climb_gps.BB;
+	GPSvelocity.z = climb_gps.WW + climb_rate_delta;
+	climb_rate_previous = climb_gps.WW;
 
+#if (GPS_TYPE != GPS_UBX_10HZ)
+	union longww accum_velocity;
 	accum_velocity.WW = (__builtin_mulss(cosine(actual_dir), ground_velocity_magnitudeXY) << 2) + 0x00008000;
 	GPSvelocity.x = accum_velocity._.W1;
 
 	accum_velocity.WW = (__builtin_mulss(sine(actual_dir), ground_velocity_magnitudeXY) << 2) + 0x00008000;
 	GPSvelocity.y = accum_velocity._.W1;
+#else
+	GPSvelocity.x = vel_E.WW;
+	GPSvelocity.y = vel_N.WW;
 
+#endif //#if (GPS_TYPE != GPS_UBX_10HZ)
 	rotate_2D(&location_deltaXY, cog_delta); // this is a key step to account for rotation effects!!
 
 	GPSlocation.x = location[0] + location_deltaXY.x;
@@ -164,7 +169,9 @@ void estLocation(void)
 	// veclocity_thru_air.x becomes XY air speed as a by product of CORDIC routine in rect_to_polar()
 	air_speed_magnitudeXY = velocity_thru_air.x; // in cm / sec
 
-#if (GPS_RATE == 4)
+#if (GPS_RATE == 10)
+	forward_acceleration = __builtin_divsd((air_speed_3DGPS - velocity_previous),10) ; // Ublox 10 Hz enters code 10 times per second
+#elif (GPS_RATE == 4)
 	forward_acceleration = (air_speed_3DGPS - velocity_previous) << 2; // Ublox enters code 4 times per second
 #elif (GPS_RATE == 2)
 	forward_acceleration = (air_speed_3DGPS - velocity_previous) << 1; // Ublox enters code 2 times per second
